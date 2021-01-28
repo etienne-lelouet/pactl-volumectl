@@ -1,0 +1,15 @@
+#!/bin/bash
+re='^[0-9]+$'
+VARRUNNING=$(pactl list sinks short | sed -En '0,/[0-9]+.*RUNNING/ s/([0-9]+).*RUNNING/\1/p')
+
+if [[ $VARRUNNING =~ $re ]] ; then
+    echo $VARRUNNING
+else
+    VARFIRST=$(pactl list sinks short | sed -En '0,/^[0-9]+.*$/ s/^([0-9]+).*$/\1/p')
+
+    if [[ $VARFIRST =~ $re ]] ; then
+        echo $VARFIRST
+    else
+        echo -1
+    fi
+fi

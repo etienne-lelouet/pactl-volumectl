@@ -1,0 +1,35 @@
+#!/bin/bash
+
+SINK=$(dwmcustom-getsink)
+
+CURVOLUME=($(dwmcustom-getvolume))
+
+reoperand='^+|-$'
+renum='^[0-9]+$'
+remute='^m$'
+
+if [[ $1 =~ $remute ]]; then
+    pactl set-sink-mute ${SINK} toggle
+elif ! [[ $1 =~ $reoperand ]] && [[ $2 =~ $renum ]]; then
+    if [[ ${1} = "+" ]]; then
+        if [ $((CURVOLUME[0] + ${2})) -gt 100 ] || [ $((CURVOLUME[1] + ${2})) -gt 100 ]; then
+            pactl set-sink-volume ${SINK} 100%
+        else
+            pactl set-sink-volume ${SINK} +${2}%
+        fi
+    elif [[ ${1} = "-" ]]; then
+        if [ $((CURVOLUME[0] - $2)) -lt 0 ] || [ $((CURVOLUME[1] - $2)) -lt 0 ]; then
+            pactl set-sink-volume ${SINK} 0%
+        else
+            pactl set-sink-volume ${SINK} -${2}%
+        fi
+    else
+        echo "invalid operand"
+    fi
+else
+    echo "invalid args"
+fi
+
+CURVOLUME=($(./volumeget))
+
+echo ${CURVOLUME[0]} ${CURVOLUME[1]}
