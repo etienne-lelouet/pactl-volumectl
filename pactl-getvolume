@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SINK=$(dwmcustom-getsink)
+SINK=$(pactl-getsink)
 remute='^m$'
 
 if ! [[ "$SINK" -eq -1 ]]; then

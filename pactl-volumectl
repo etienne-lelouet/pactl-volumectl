@@ -1,8 +1,8 @@
 #!/bin/bash
 
-SINK=$(dwmcustom-getsink)
+SINK=$(pactl-getsink)
 
-CURVOLUME=($(dwmcustom-getvolume))
+CURVOLUME=($(pactl-getvolume))
 
 reoperand='^+|-$'
 renum='^[0-9]+$'
@@ -29,7 +29,3 @@ elif ! [[ $1 =~ $reoperand ]] && [[ $2 =~ $renum ]]; then
 else
     echo "invalid args"
 fi
-
-CURVOLUME=($(./volumeget))
-
-echo ${CURVOLUME[0]} ${CURVOLUME[1]}
