@@ -4,7 +4,9 @@ Command line utilities to get and modify volume of a running pulseaudio server.
 
 - `pactl-getsink` gets the firsk running sink, or the first sink returned if none are running
 - `pactl-getvolume` returns the volume or the mute status of the sink returned by getsink
-- `pactl-volumectl` modified the volume or the mute status of the sink returned by getsink
+- `pactl-volumectl` modifies the volume or the mute status of the sink returned by getsink
+
+Running `pactl-volumectl` with the `--displaynotification` will send a notification containing the updated volume through dbus.
 
 ## TODO
 

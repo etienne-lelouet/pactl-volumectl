@@ -4,27 +4,50 @@ SINK=$(pactl-getsink)
 
 CURVOLUME=($(pactl-getvolume))
 
+NOTIFYIDFILE="/tmp/.notif"
+
 reoperand='^+|-$'
 renum='^[0-9]+$'
 remute='^m$'
+redisplaynotification="--displaynotification"
+
+if ! [ -f $NOTIFYIDFILE ];
+then
+    echo '1' | tee "$NOTIFYIDFILE"
+fi
 
 if [[ $1 =~ $remute ]]; then
     pactl set-sink-mute ${SINK} toggle
 elif ! [[ $1 =~ $reoperand ]] && [[ $2 =~ $renum ]]; then
+    NEWVOLUME=${CURVOLUME[O]} # for now we are acting as if the left and right channel volumes are locked
     if [[ ${1} = "+" ]]; then
-        if [ $((CURVOLUME[0] + ${2})) -gt 100 ] || [ $((CURVOLUME[1] + ${2})) -gt 100 ]; then
-            pactl set-sink-volume ${SINK} 100%
-        else
-            pactl set-sink-volume ${SINK} +${2}%
+        NEWVOLUME=$((NEWVOLUME + ${2})) 
+        if [ $NEWVOLUME -gt 100 ]; then
+            NEWVOLUME="100"
         fi
     elif [[ ${1} = "-" ]]; then
-        if [ $((CURVOLUME[0] - $2)) -lt 0 ] || [ $((CURVOLUME[1] - $2)) -lt 0 ]; then
-            pactl set-sink-volume ${SINK} 0%
-        else
-            pactl set-sink-volume ${SINK} -${2}%
+        NEWVOLUME=$((NEWVOLUME - ${2}))
+        if [ $NEWVOLUME -lt 0 ]; then
+            NEWVOLUME="0"
         fi
-    else
-        echo "invalid operand"
+    fi
+    pactl set-sink-volume ${SINK} ${NEWVOLUME}%
+
+    if [[ $3 =~ $redisplaynotification ]]; then
+        notifid=$(cat $NOTIFYIDFILE)
+        gdbus call \
+            --session \
+            --dest org.freedesktop.Notifications \
+            --object-path /org/freedesktop/Notifications \
+            --method org.freedesktop.Notifications.Notify \
+            "identifier" \
+            "$notifid" \
+            "" \
+            "Volume of sink $SINK" \
+            "$NEWVOLUME%" \
+            "[]" \
+            "{}" \
+            "1500" | sed 's/[^ ]* //; s/,.//' | tee "$NOTIFYIDFILE"
     fi
 else
     echo "invalid args"
