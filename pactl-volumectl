@@ -6,33 +6,113 @@ CURVOLUME=($(pactl-getvolume))
 
 NOTIFYIDFILE="/tmp/.notif"
 
-reoperand='^+|-$'
+reoperator='^+|-$'
 renum='^[0-9]+$'
-remute='^m$'
-redisplaynotification="--displaynotification"
+# remute='^m$'
+# redisplaynotification="--displaynotification"
+
+DISPLAYNOTIFICATION=false
+MUTE=false
+OPERATOR=""
+VALUE=""
+
+usage() {
+  echo "Usage: $0 [ -d (display notification) ] -m (mute) | -o OPERATOR -v value" 1>&2 
+}
+exit_abnormal() {
+  usage
+  exit 1
+}
+while getopts "dmo:v:" options; do
+    case "${options}" in
+        d)
+            DISPLAYNOTIFICATION=true
+            ;;
+        m)
+            MUTE=true
+            ;;
+        o)
+            OPERATOR=${OPTARG}
+            if ! [ "$OPERATOR" = "+" ] && ! [ $OPERATOR = "-" ]; 
+            then
+                echo "Error: operator must be + or -"
+                exit_abnormal
+                exit 1
+            fi
+            ;;
+        v)
+            VALUE=${OPTARG}
+            if ! [[ $VALUE =~ $renum ]]; 
+            then
+                echo "Error: value must be a number"
+                exit_abnormal
+            fi
+            ;;
+        :)
+            echo "Error: -${OPTARG} requires an argument."
+            exit_abnormal
+            ;;
+        *)
+            exit_abnormal
+            ;;
+    esac
+done
+
+if [ "$MUTE" = false ] && ( [ "$OPERATOR" = "" ] || [ "$VALUE" = "" ] );
+then
+    exit_abnormal
+fi
 
 if ! [ -f $NOTIFYIDFILE ];
 then
     echo '1' | tee "$NOTIFYIDFILE"
 fi
 
-if [[ $1 =~ $remute ]]; then
+if [ "$MUTE" = true ]; then
     pactl set-sink-mute ${SINK} toggle
-elif ! [[ $1 =~ $reoperand ]] && [[ $2 =~ $renum ]]; then
-    NEWVOLUME=${CURVOLUME[O]} # for now we are acting as if the left and right channel volumes are locked
-    if [[ ${1} = "+" ]]; then
-        NEWVOLUME=$((NEWVOLUME + ${2})) 
-        if [ $NEWVOLUME -gt 100 ]; then
-            NEWVOLUME="100"
-        fi
-    elif [[ ${1} = "-" ]]; then
-        NEWVOLUME=$((NEWVOLUME - ${2}))
-        if [ $NEWVOLUME -lt 0 ]; then
-            NEWVOLUME="0"
-        fi
+    MUTESTATUS=$(pactl-getvolume m)
+    MUTESTATUSSTRING=""
+    if [ $MUTESTATUS -eq 1 ];
+    then
+        MUTESTATUSSTRING="Muted"
+    elif [ $MUTESTATUS -eq 0 ];
+    then
+        MUTESTATUSSTRING="Unmuted"
+    fi
+    notifid=$(cat $NOTIFYIDFILE)
+    gdbus call \
+        --session \
+        --dest org.freedesktop.Notifications \
+        --object-path /org/freedesktop/Notifications \
+        --method org.freedesktop.Notifications.Notify \
+        "identifier" \
+        "$notifid" \
+        "" \
+        "Mute status of sink $SINK" \
+        "$MUTESTATUSSTRING" \
+        "[]" \
+        "{}" \
+        "1500" | sed 's/[^ ]* //; s/,.//' | tee "$NOTIFYIDFILE"
+
+else
+    NEWVOLUME=$(echo "${CURVOLUME[O]} $OPERATOR $VALUE" | bc) # for now we are acting as if the left and right channel volumes are locked 
+    if [ $NEWVOLUME -gt 100 ]; then
+        NEWVOLUME="100"
+    fi
+    if [ $NEWVOLUME -lt 0 ]; then
+        NEWVOLUME="0"
+    fi
+    # if [[ ${1} = "+" ]]; then
+    #     NEWVOLUME=$((NEWVOLUME + ${2}))
+    # elif [[ ${1} = "-" ]]; then
+    #     NEWVOLUME=$((NEWVOLUME - ${2}))
+    # fi
+    MUTESTATUS=$(pactl-getvolume m)
+    if [ $MUTESTATUS -eq 1 ];
+    then
+        pactl set-sink-mute ${SINK} false
     fi
     pactl set-sink-volume ${SINK} ${NEWVOLUME}%
-
     if [[ $3 =~ $redisplaynotification ]]; then
         notifid=$(cat $NOTIFYIDFILE)
         gdbus call \
@@ -49,6 +129,4 @@ elif ! [[ $1 =~ $reoperand ]] && [[ $2 =~ $renum ]]; then
             "{}" \
             "1500" | sed 's/[^ ]* //; s/,.//' | tee "$NOTIFYIDFILE"
     fi
-else
-    echo "invalid args"
 fi
