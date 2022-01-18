@@ -83,8 +83,8 @@ if [ "$CHANGE" = true ]; then
         "identifier" \
         "$notifid" \
         "" \
-        "Changed controlled sink, it is now $SINKNAME" \
-        "$" \
+        "Changed controlled sink" \
+        "it is now $SINKNAME" \
         "[]" \
         "{}" \
         "1500" | sed 's/[^ ]* //; s/,.//' | tee "$NOTIFYIDFILE"
