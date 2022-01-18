@@ -1,10 +1,19 @@
 #!/bin/bash
 
-SINK=$(pactl-getsink)
 
-CURVOLUME=($(pactl-getvolume))
+SINK=$(cat /tmp/pactl-volumectl-sink)
+
+if [ -z ${SINK} ]; then
+    SINK=$(pactl-getsink| sed -n '1p')
+fi
+
+CURVOLUME=$(pactl-getvolume)
+IFS=' ' read -r -a CURVOLUMEARRAY <<< "$CURVOLUME"
+
+SINKNAME=$(pactl-getsink $SINK)
 
 NOTIFYIDFILE="/tmp/.notif"
+SELECTEDSINKFILE="/tmp/pactl_volumectl_selectedsink"
 
 reoperator='^+|-$'
 renum='^[0-9]+$'
@@ -13,23 +22,26 @@ renum='^[0-9]+$'
 
 DISPLAYNOTIFICATION=false
 MUTE=false
+CHANGE=false
 OPERATOR=""
 VALUE=""
-
 usage() {
-  echo "Usage: $0 [ -d (display notification) ] -m (mute) | -o OPERATOR -v value" 1>&2 
+  echo "Usage: $0 [ -d (display notification) ] -c (toggle sink) | -m (mute) | -o OPERATOR -v value" 1>&2 
 }
 exit_abnormal() {
   usage
   exit 1
 }
-while getopts "dmo:v:" options; do
+while getopts "dmco:v:" options; do
     case "${options}" in
         d)
             DISPLAYNOTIFICATION=true
             ;;
         m)
             MUTE=true
+            ;;
+        c)
+            CHANGE=true
             ;;
         o)
             OPERATOR=${OPTARG}
@@ -57,6 +69,13 @@ while getopts "dmo:v:" options; do
             ;;
     esac
 done
+
+if [ "$CHANGE" = true ]; then
+    newsink=$(pactl-getsink | grep -v $(cat /tmp/pactl-volumectl-sink))
+    echo $newsink
+    echo $newsink > /tmp/pactl-volumectl-sink
+    exit 0
+fi
 
 if [ "$MUTE" = false ] && ( [ "$OPERATOR" = "" ] || [ "$VALUE" = "" ] );
 then
@@ -88,14 +107,14 @@ if [ "$MUTE" = true ]; then
         "identifier" \
         "$notifid" \
         "" \
-        "Mute status of sink $SINK" \
+        "Mute status of sink $SINKNAME" \
         "$MUTESTATUSSTRING" \
         "[]" \
         "{}" \
         "1500" | sed 's/[^ ]* //; s/,.//' | tee "$NOTIFYIDFILE"
 
 else
-    NEWVOLUME=$(echo "${CURVOLUME[O]} $OPERATOR $VALUE" | bc) # for now we are acting as if the left and right channel volumes are locked 
+    NEWVOLUME=$(echo "${CURVOLUMEARRAY[O]} $OPERATOR $VALUE" | bc) # for now we are acting as if the left and right channel volumes are locked 
     if [ $NEWVOLUME -gt 100 ]; then
         NEWVOLUME="100"
     fi
@@ -123,7 +142,7 @@ else
             "identifier" \
             "$notifid" \
             "" \
-            "Volume of sink $SINK" \
+            "Volume of sink $SINKNAME" \
             "$NEWVOLUME%" \
             "[]" \
             "{}" \

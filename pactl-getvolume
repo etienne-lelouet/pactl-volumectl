@@ -1,6 +1,11 @@
 #!/bin/bash
 
-SINK=$(pactl-getsink)
+SINK=$(cat /tmp/pactl-volumectl-sink)
+
+if [ -z ${SINK} ]; then
+    SINK=$(pactl-getsink| sed -n '1p')
+fi
+
 remute='^m$'
 
 if ! [[ "$SINK" -eq -1 ]]; then

@@ -1,15 +1,11 @@
 #!/bin/bash
 re='^[0-9]+$'
-VARRUNNING=$(pactl list sinks short | sed -En '0,/[0-9]+.*RUNNING/ s/([0-9]+).*RUNNING/\1/p')
+SINKS=$()
 
-if [[ $VARRUNNING =~ $re ]] ; then
-    echo $VARRUNNING
+if [ -z ${1+x} ]; then
+    SINKS=$(pactl list sinks short | sed -En 's/([0-9]+).*$/\1/p')
 else
-    VARFIRST=$(pactl list sinks short | sed -En '0,/^[0-9]+.*$/ s/^([0-9]+).*$/\1/p')
-
-    if [[ $VARFIRST =~ $re ]] ; then
-        echo $VARFIRST
-    else
-        echo -1
-    fi
+    SINKS=$(pactl list sinks | sed -En '/Sink #'$(cat /tmp/pactl-volumectl-sink)'/,/(Sink #[0-9]+)/ s/^\s*Description: (.*)$/\1/p')
 fi
+
+echo -e "$SINKS"
