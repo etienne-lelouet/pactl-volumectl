@@ -10,7 +10,7 @@ fi
 CURVOLUME=$(pactl-getvolume)
 IFS=' ' read -r -a CURVOLUMEARRAY <<< "$CURVOLUME"
 
-SINKNAME=$(pactl-getsink $SINK)
+SINKNAME=$(pactl-getsink -n)
 
 NOTIFYIDFILE="/tmp/.notif"
 SELECTEDSINKFILE="/tmp/pactl_volumectl_selectedsink"
@@ -72,8 +72,22 @@ done
 
 if [ "$CHANGE" = true ]; then
     newsink=$(pactl-getsink | grep -v $(cat /tmp/pactl-volumectl-sink))
-    echo $newsink
     echo $newsink > /tmp/pactl-volumectl-sink
+    SINKNAME=$(pactl-getsink -n)
+    notifid=$(cat $NOTIFYIDFILE)
+    gdbus call \
+        --session \
+        --dest org.freedesktop.Notifications \
+        --object-path /org/freedesktop/Notifications \
+        --method org.freedesktop.Notifications.Notify \
+        "identifier" \
+        "$notifid" \
+        "" \
+        "Changed controlled sink, it is now $SINKNAME" \
+        "$" \
+        "[]" \
+        "{}" \
+        "1500" | sed 's/[^ ]* //; s/,.//' | tee "$NOTIFYIDFILE"
     exit 0
 fi
 
