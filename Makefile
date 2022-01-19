@@ -15,9 +15,9 @@ install: all
 	chmod 755 ${DESTDIR}${PREFIX}/bin/pactl-volumectl
 
 uninstall:
-	rm -f ${DESTDIR}${PREFIX}/bin/dwmcustom-getsink\
-		${DESTDIR}${PREFIX}/bin/dwmcustom-getvolume\
-		${DESTDIR}${PREFIX}/bin/dwmcustom-volumectl
+	rm -f ${DESTDIR}${PREFIX}/bin/pactl-getsink\
+		${DESTDIR}${PREFIX}/bin/pactl-getvolume\
+		${DESTDIR}${PREFIX}/bin/pactl-volumectl
 
 
 .PHONY: all install uninstall
