@@ -71,7 +71,7 @@ while getopts "dmco:v:" options; do
 done
 
 if [ "$CHANGE" = true ]; then
-    newsink=$(pactl-getsink | grep -v $(cat /tmp/pactl-volumectl-sink))
+    newsink=$(pactl-getsink | grep -v $(cat /tmp/pactl-volumectl-sink) | sed -n '1p')
     echo $newsink > /tmp/pactl-volumectl-sink
     SINKNAME=$(pactl-getsink -n)
     notifid=$(cat $NOTIFYIDFILE)
