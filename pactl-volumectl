@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+renum='^[0-9]+$'
 SINK=$(cat /tmp/pactl-volumectl-sink)
 
 if [ -z ${SINK} ]; then
@@ -70,6 +70,11 @@ while getopts "dmco:v:" options; do
     esac
 done
 
+if ! [ -f $NOTIFYIDFILE ] || [[ ! $(cat "$NOTIFYIDFILE") =~ $renum  ]];
+then
+    echo '1' | tee "$NOTIFYIDFILE"
+fi
+
 if [ "$CHANGE" = true ]; then
     newsink=$(pactl-getsink | grep -v $(cat /tmp/pactl-volumectl-sink) | sed -n '1p')
     echo $newsink > /tmp/pactl-volumectl-sink
@@ -94,11 +99,6 @@ fi
 if [ "$MUTE" = false ] && ( [ "$OPERATOR" = "" ] || [ "$VALUE" = "" ] );
 then
     exit_abnormal
-fi
-
-if ! [ -f $NOTIFYIDFILE ];
-then
-    echo '1' | tee "$NOTIFYIDFILE"
 fi
 
 if [ "$MUTE" = true ]; then
