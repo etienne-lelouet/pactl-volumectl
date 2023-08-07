@@ -9,19 +9,23 @@ fi
 remute='^m$'
 
 if ! [[ "$SINK" -eq -1 ]]; then
-
     if [[ $1 =~ $remute ]]; then
-        MUTESTATUS="pactl list sinks | sed -En '/Sink #'${SINK}'/,+8p' | sed -En 's/Mute: +(.*)/\1/p' | xargs"
-        MUTESTATUS=$(eval ${MUTESTATUS})
-        if [ ${MUTESTATUS} = "yes" ]; then
+        MUTESTATUS="$(pactl list sinks | sed -En '/Sink #'"${SINK}"'/,+8p' | sed -En 's/Mute: +(.*)/\1/p' | xargs)"
+         if [ "${MUTESTATUS}" = "yes" ]; then
             echo 1
-        elif [ ${MUTESTATUS} = "no" ]; then
+        elif [ "${MUTESTATUS}" = "no" ]; then
             echo 0
         else
             echo -1
         fi
     else
-        pactl list sinks | sed -En '/Sink #'${SINK}'/,+9p' | sed -En 's/Volume:.+\/ +([0-9]+)\%.+\/ +([0-9]+)\%.*$/\1 \2/p' | xargs
+        read -r left right <<< "$(pactl list sinks | sed -En '/Sink #'${SINK}'/,+9p' | sed -En 's/Volume:.+\/ +([0-9]+)\%.+\/ +([0-9]+)\%.*$/\1 \2/p' | xargs)"
+	if [ "$left" -lt 0 ] || [ "$left" -gt 100 ] || [ "$right" -lt 0 ] || [ "$right" -gt 100 ]; then
+	    echo "-1 -1"
+	else
+	    echo "$left $right"
+	fi
+	
     fi
 else
     echo "-1 -1"
